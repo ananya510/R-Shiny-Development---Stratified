@@ -1,0 +1,96 @@
+# -------------------------------
+# 1. SET PARAMETERS
+# -------------------------------
+
+set.seed(123)
+
+N <- 10000              # Total population size
+mu <- 50                # True population mean
+sigma <- 10             # Population SD
+cluster_size <- 20      # Units per cluster
+cost_per_cluster <- 500 # Cost per cluster (₹)
+time_per_cluster <- 2   # Time per cluster (days)
+
+# Desired precision
+margin_error <- 2
+confidence_level <- 0.95
+z <- qnorm((1 + confidence_level) / 2)
+
+# Intra-cluster correlation (assumed)
+rho <- 0.05
+
+# -------------------------------
+# 2. GENERATE POPULATION
+# -------------------------------
+
+population <- rnorm(N, mean = mu, sd = sigma)
+
+# Divide population into clusters
+clusters <- split(population, rep(1:(N / cluster_size), each = cluster_size))
+
+# -------------------------------
+# 3. REQUIRED NUMBER OF CLUSTERS
+# -------------------------------
+
+# Design effect
+design_effect <- 1 + (cluster_size - 1) * rho
+
+# Required sample size (SRS)
+n_srs <- (z^2 * sigma^2) / (margin_error^2)
+
+# Adjusted sample size for cluster sampling
+n_cluster_units <- n_srs * design_effect
+
+# Required number of clusters
+required_clusters <- ceiling(n_cluster_units / cluster_size)
+
+required_clusters
+
+
+sampled_clusters <- sample(clusters, required_clusters)
+sampled_data <- unlist(sampled_clusters)
+
+sample_mean <- mean(sampled_data)
+
+
+true_mean <- mean(population)
+sampling_bias <- sample_mean - true_mean
+
+sampling_bias
+
+
+total_cost <- required_clusters * cost_per_cluster
+total_time <- required_clusters * time_per_cluster
+
+total_cost
+total_time
+
+
+summary_results <- data.frame(
+  True_Mean = true_mean,
+  Sample_Mean = sample_mean,
+  Sampling_Bias = sampling_bias,
+  Required_Clusters = required_clusters,
+  Total_Cost = total_cost,
+  Total_Time_Days = total_time
+)
+
+summary_results
+
+
+
+cluster_ids <- 1:length(clusters)
+selected <- cluster_ids %in% match(sampled_clusters, clusters)
+
+plot(cluster_ids, rep(1, length(cluster_ids)),
+     col = ifelse(selected, "red", "grey"),
+     pch = 19,
+     xlab = "Cluster ID",
+     ylab = "",
+     main = "Cluster Sampling Design",
+     yaxt = "n")
+
+legend("topright",
+       legend = c("Selected Clusters", "Non-selected Clusters"),
+       col = c("red", "grey"),
+       pch = 19)
